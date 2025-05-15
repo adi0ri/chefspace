@@ -3,51 +3,67 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRecipes } from '../contexts/RecipeContext'; // To call handleToggleLike
-import { toggleRecipeSave } from '../services/recipeService'; // For save/unsave
-import { getUserProfile } from '../services/userService'; // For updating savedRecipeIds in context
+// We are moving toggleRecipeSave logic into RecipeDetailPage for better state management of isSaved.
+// For the card, it's mostly display. Actions will be on the detail page.
+// However, if you want like/save directly on the card, the context function needs to handle UI update.
 
 const RecipeCard = ({ recipe }) => {
-    const { currentUser, currentUserProfile } = useAuth(); // currentUserProfile has savedRecipeIds
-    const { handleToggleLike } = useRecipes(); // For likes
-    // const { refreshUserProfile } = useAuth(); // Conceptual: a function to refresh currentUserProfile
+    const { currentUser, currentUserProfile } = useAuth();
+    const { handleToggleLike } = useRecipes(); // Assuming this updates the recipe in context
+
+    // Defensive checks for recipe object
+    if (!recipe || !recipe.id) {
+        // console.warn("RecipeCard received an invalid recipe object:", recipe);
+        return null; // Don't render if recipe is invalid
+    }
 
     const isLikedByCurrentUser = currentUser && recipe.likedBy?.includes(currentUser.uid);
-    const isSavedByCurrentUser = currentUserProfile && currentUserProfile.savedRecipeIds?.includes(recipe.id);
+    // For saved status on the card, we'd ideally need this info passed down or managed in a way
+    // that the card can reflect it without fetching user profile for every card.
+    // Let's assume for the card, we primarily show counts, and full save interaction is on detail page.
+    const isSavedByCurrentUserOnCard = currentUserProfile && currentUserProfile.savedRecipeIds?.includes(recipe.id);
 
-    const onLikeClick = async () => {
-        if (!currentUser) return alert("Please login to like recipes.");
+
+    const onLikeClickOnCard = async (e) => {
+        e.preventDefault(); // Prevent navigation if card is wrapped in Link
+        e.stopPropagation(); // Prevent event bubbling
+        if (!currentUser) {
+            alert("Please login to like recipes.");
+            console.log("Like attempt: No current user");
+            return;
+        }
+        console.log(`RecipeCard: Attempting to like/unlike recipe ID: ${recipe.id} by user ${currentUser.uid}`);
         try {
-            await handleToggleLike(recipe.id, recipe.likedBy);
-            // UI will update when recipe context refreshes the recipe, or if RecipeDetailPage re-fetches
+            await handleToggleLike(recipe.id, recipe.likedBy); // This should trigger a re-render if 'recipes' in context updates
+            console.log(`RecipeCard: Like toggled for ${recipe.id}`);
         } catch (error) {
-            console.error("Error liking/unliking recipe:", error);
-            alert("Failed to update like.");
+            console.error("RecipeCard: Error liking/unliking recipe:", error);
+            alert("Failed to update like status. Please try again.");
         }
     };
 
-    const onSaveClick = async () => {
-        if (!currentUser) return alert("Please login to save recipes.");
-        try {
-            await toggleRecipeSave(recipe.id, currentUser.uid, isSavedByCurrentUser);
-            // Manually refresh the currentUserProfile in AuthContext to reflect the change
-            // This is a tricky part without a direct context update function.
-            // A full solution might involve the AuthContext re-fetching the profile.
-            // For now, the local state in RecipeDetailPage handles its own isSaved,
-            // and UserProfilePage will fetch the latest on load.
-            // To make the card itself reactive to saved status changes immediately across the app,
-            // AuthContext would need a way to broadcast or allow updates to currentUserProfile.
-            // Or, RecipeContext could manage the "isSaved" status per recipe if it fetched that info.
-            alert(`Recipe ${isSavedByCurrentUser ? 'unsaved' : 'saved'}. Refresh profile to see updated list.`);
-            // Conceptual: if (refreshUserProfile) refreshUserProfile();
-        } catch (error) {
-            console.error("Error saving/unsaving recipe:", error);
-            alert("Failed to update save status.");
+    // Simplified save button for card - actual save/unsave logic on detail page
+    // or implement a similar handleToggleSave in RecipeContext if needed here.
+    const onSaveClickOnCard = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!currentUser) {
+            alert("Please login to save recipes.");
+            return;
         }
+        // For the card, you might just navigate to the detail page or show a message
+        // alert(`Save functionality primarily on recipe detail page for ${recipe.title}`);
+        // Or, if you implement a context function for card-level save:
+        // try { await handleToggleSaveOnCard(recipe.id, isSavedByCurrentUserOnCard); } catch ...
+        // For now, let's make it a visual indicator and link to the detail page for action
+        console.log("RecipeCard: Save button clicked. Interaction on detail page.");
     };
+
 
     return (
         <div className="recipe-card">
             <Link to={`/recipe/${recipe.id}`}>
+                {/* ... (image and title - same as before) ... */}
                 {recipe.photoURLs && recipe.photoURLs.length > 0 ? (
                     <img src={recipe.photoURLs[0]} alt={recipe.title} />
                 ) : (
@@ -55,23 +71,22 @@ const RecipeCard = ({ recipe }) => {
                 )}
                 <h3>{recipe.title}</h3>
             </Link>
-            <p>By: <Link to={`/profile/${recipe.authorId}`}>{recipe.authorUsername}</Link></p>
-            <p>Cuisine: {recipe.cuisineType || 'N/A'} | Difficulty: {recipe.difficultyLevel || 'N/A'}</p>
+            <p>By: <Link to={`/profile/${recipe.authorId}`}>{recipe.authorUsername || 'Unknown'}</Link></p>
             <p>Likes: {recipe.likesCount || 0} | Comments: {(recipe.comments && recipe.comments.length) || 0} | Saved: {recipe.savesCount || 0}</p>
             {currentUser && (
-                <div>
-                    <button 
-                        onClick={onLikeClick}
+                <div className="recipe-card-actions" style={{ marginTop: '10px' }}>
+                    <button
+                        onClick={onLikeClickOnCard}
                         className={`action-button ${isLikedByCurrentUser ? 'active' : ''}`}
+                        aria-pressed={isLikedByCurrentUser}
+                        title={isLikedByCurrentUser ? 'Unlike this recipe' : 'Like this recipe'}
                     >
-                        {isLikedByCurrentUser ? 'Unlike' : 'Like'}
+                        <span role="img" aria-label="like icon">{isLikedByCurrentUser ? '❤️' : '🤍'}</span> Like
                     </button>
-                    <button 
-                        onClick={onSaveClick}
-                        className={`action-button ${isSavedByCurrentUser ? 'active' : ''}`}
-                    >
-                        {isSavedByCurrentUser ? 'Unsave' : 'Save'}
-                    </button>
+                    {/* For card, save button might just be an indicator or link */}
+                    <Link to={`/recipe/${recipe.id}`} className={`action-button ${isSavedByCurrentUserOnCard ? 'active' : ''}`} style={{marginLeft: '5px', textDecoration:'none'}} title="View and Save/Unsave">
+                        <span role="img" aria-label="save icon">{isSavedByCurrentUserOnCard ? '🔖' : '📑'}</span> Save
+                    </Link>
                 </div>
             )}
         </div>

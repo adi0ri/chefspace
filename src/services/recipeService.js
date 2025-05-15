@@ -17,153 +17,283 @@ import {
     arrayUnion,
     arrayRemove,
     increment,
-    writeBatch
+    writeBatch // For atomic operations like save/unsave
 } from 'firebase/firestore';
 
 const recipesCollectionRef = collection(db, 'recipes');
 
+/**
+ * Creates a new recipe document in Firestore.
+ * @param {object} recipeData - The recipe data (should include authorId, authorUsername).
+ * @returns {Promise<object>} The created recipe object with its new Firestore ID.
+ */
 export const createRecipeInFirestore = async (recipeData) => {
-    // recipeData should include authorId, authorUsername from currentUser
+    console.log("recipeService: Creating recipe with data:", recipeData);
     try {
         const docRef = await addDoc(recipesCollectionRef, {
-            ...recipeData,
-            timestamp: serverTimestamp(), // Use server timestamp
-            likesCount: 0, // Initialize counts
+            ...recipeData, // Includes title, ingredients, instructions, photoURLs, cuisineType, difficultyLevel, dietaryRestrictions, authorId, authorUsername
+            timestamp: serverTimestamp(),
+            createdAt: serverTimestamp(), // Explicit creation timestamp
+            updatedAt: serverTimestamp(), // Initial updatedAt
+            likesCount: 0,
             savesCount: 0,
-            // comments will be a subcollection or an array
+            likedBy: [], // Array of user UIDs who liked this
+            comments: [], // Array of comment objects { commentId, userId, username, text, timestamp }
         });
-        return { id: docRef.id, ...recipeData, timestamp: new Date() }; // Return with ID
+        console.log("recipeService: Recipe created with ID:", docRef.id);
+        // Fetch the just-created doc to get server-generated timestamps immediately (optional, or construct locally)
+        // const newDocSnap = await getDoc(docRef);
+        // return { id: newDocSnap.id, ...newDocSnap.data() };
+        return { id: docRef.id, ...recipeData, timestamp: new Date(), createdAt: new Date(), updatedAt: new Date(), likesCount: 0, savesCount: 0, likedBy: [], comments: [] }; // Return with ID and optimistic timestamps
     } catch (error) {
-        console.error("Error adding recipe to Firestore: ", error);
+        console.error("recipeService: Error adding recipe to Firestore: ", error);
         throw error;
     }
 };
 
-export const getRecipesFromFirestore = async (lastFetchedRecipe = null, queryLimit = 9) => {
+/**
+ * Fetches a paginated list of recipes from Firestore, ordered by timestamp.
+ * @param {DocumentSnapshot | null} lastFetchedRecipe - The last document snapshot from the previous fetch (for pagination).
+ * @param {number} queryLimit - The number of recipes to fetch.
+ * @returns {Promise<{recipes: Array<object>, lastVisible: DocumentSnapshot | null}>}
+ */
+export const getRecipesFromFirestore = async (lastFetchedRecipeDoc = null, queryLimit = 9) => {
+    console.log("recipeService: Fetching recipes, lastFetchedRecipeDoc:", lastFetchedRecipeDoc);
     let q;
-    if (lastFetchedRecipe) {
-        q = query(recipesCollectionRef, orderBy('timestamp', 'desc'), startAfter(lastFetchedRecipe), limit(queryLimit));
+    if (lastFetchedRecipeDoc) {
+        q = query(recipesCollectionRef, orderBy('timestamp', 'desc'), startAfter(lastFetchedRecipeDoc), limit(queryLimit));
     } else {
         q = query(recipesCollectionRef, orderBy('timestamp', 'desc'), limit(queryLimit));
     }
-    const querySnapshot = await getDocs(q);
-    const recipes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const lastVisible = querySnapshot.docs[querySnapshot.docs.length - 1];
-    return { recipes, lastVisible };
+    try {
+        const querySnapshot = await getDocs(q);
+        const recipes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const lastVisible = querySnapshot.docs.length > 0 ? querySnapshot.docs[querySnapshot.docs.length - 1] : null;
+        console.log(`recipeService: Fetched ${recipes.length} recipes. Last visible provided: ${!!lastVisible}`);
+        return { recipes, lastVisible };
+    } catch (error) {
+        console.error("recipeService: Error fetching recipes:", error);
+        throw error;
+    }
 };
 
+/**
+ * Fetches a single recipe by its ID from Firestore.
+ * @param {string} recipeId - The ID of the recipe to fetch.
+ * @returns {Promise<object | null>} The recipe object or null if not found.
+ */
 export const getRecipeByIdFromFirestore = async (recipeId) => {
-    const recipeDocRef = doc(db, 'recipes', recipeId);
-    const docSnap = await getDoc(recipeDocRef);
-    if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() };
-    } else {
-        console.log("No such recipe!");
+    console.log("recipeService: Fetching recipe by ID:", recipeId);
+    if (!recipeId) {
+        console.warn("recipeService: getRecipeByIdFromFirestore called with no recipeId");
         return null;
     }
-};
-
-export const updateRecipeInFirestore = async (recipeId, dataToUpdate) => {
     const recipeDocRef = doc(db, 'recipes', recipeId);
-    await updateDoc(recipeDocRef, {
-        ...dataToUpdate,
-        updatedAt: serverTimestamp() // Optionally add an updatedAt field
-    });
-};
-
-export const deleteRecipeFromFirestore = async (recipeId) => {
-    const recipeDocRef = doc(db, 'recipes', recipeId);
-    await deleteDoc(recipeDocRef);
-    // TODO: Also delete from users' savedRecipeIds (can be complex, consider Cloud Functions)
-    // TODO: Delete associated comments and likes if they are in subcollections
-};
-
-// --- Interactions ---
-
-// Like/Unlike a recipe (using an array of UIDs on the recipe doc for simplicity here)
-export const toggleRecipeLike = async (recipeId, userId, isCurrentlyLiked) => {
-    const recipeRef = doc(db, "recipes", recipeId);
-    if (isCurrentlyLiked) {
-        await updateDoc(recipeRef, {
-            likedBy: arrayRemove(userId),
-            likesCount: increment(-1)
-        });
-    } else {
-        await updateDoc(recipeRef, {
-            likedBy: arrayUnion(userId),
-            likesCount: increment(1)
-        });
+    try {
+        const docSnap = await getDoc(recipeDocRef);
+        if (docSnap.exists()) {
+            console.log("recipeService: Recipe found:", docSnap.id);
+            return { id: docSnap.id, ...docSnap.data() };
+        } else {
+            console.warn("recipeService: No such recipe with ID:", recipeId);
+            return null;
+        }
+    } catch (error) {
+        console.error(`recipeService: Error fetching recipe ${recipeId}:`, error);
+        throw error;
     }
 };
 
-// Add a comment to a recipe (as an array field for simplicity)
-// For larger apps, a subcollection 'comments' under each recipe is better.
-export const addCommentToFirestoreRecipe = async (recipeId, commentData) => {
-    // commentData: { userId, username, text }
-    const recipeRef = doc(db, "recipes", recipeId);
-    await updateDoc(recipeRef, {
-        comments: arrayUnion({
-            ...commentData,
-            commentId: doc(collection(db, 'dummy')).id, // Generate a unique ID for the comment
-            timestamp: serverTimestamp()
-        })
-    });
+/**
+ * Updates an existing recipe document in Firestore.
+ * @param {string} recipeId - The ID of the recipe to update.
+ * @param {object} dataToUpdate - An object containing the fields to update.
+ */
+export const updateRecipeInFirestore = async (recipeId, dataToUpdate) => {
+    console.log(`recipeService: Updating recipe ${recipeId} with data:`, dataToUpdate);
+    const recipeDocRef = doc(db, 'recipes', recipeId);
+    try {
+        await updateDoc(recipeDocRef, {
+            ...dataToUpdate,
+            updatedAt: serverTimestamp()
+        });
+        console.log(`recipeService: Recipe ${recipeId} updated successfully.`);
+    } catch (error) {
+        console.error(`recipeService: Error updating recipe ${recipeId}:`, error);
+        throw error;
+    }
 };
 
-// Save/Unsave a recipe (updates user's list and recipe's save count)
+/**
+ * Deletes a recipe document from Firestore.
+ * @param {string} recipeId - The ID of the recipe to delete.
+ */
+export const deleteRecipeFromFirestore = async (recipeId) => {
+    console.log(`recipeService: Deleting recipe ${recipeId}`);
+    const recipeDocRef = doc(db, 'recipes', recipeId);
+    try {
+        await deleteDoc(recipeDocRef);
+        console.log(`recipeService: Recipe ${recipeId} deleted successfully.`);
+        // TODO: Implement deletion of associated images from Storage.
+        // TODO: Implement removal of this recipeId from all users' savedRecipeIds (e.g., via a Cloud Function).
+    } catch (error) {
+        console.error(`recipeService: Error deleting recipe ${recipeId}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Toggles a like on a recipe for a given user.
+ * Updates the `likedBy` array and `likesCount` on the recipe document.
+ * @param {string} recipeId - The ID of the recipe.
+ * @param {string} userId - The ID of the user liking/unliking.
+ * @param {boolean} isCurrentlyLiked - Whether the user currently likes the recipe.
+ */
+export const toggleRecipeLike = async (recipeId, userId, isCurrentlyLiked) => {
+    console.log(`recipeService: Toggling like for recipe ${recipeId}, user ${userId}, currently liked: ${isCurrentlyLiked}`);
+    const recipeRef = doc(db, "recipes", recipeId);
+    try {
+        if (isCurrentlyLiked) {
+            await updateDoc(recipeRef, {
+                likedBy: arrayRemove(userId),
+                likesCount: increment(-1)
+            });
+        } else {
+            await updateDoc(recipeRef, {
+                likedBy: arrayUnion(userId),
+                likesCount: increment(1)
+            });
+        }
+        console.log(`recipeService: Like status updated for recipe ${recipeId}.`);
+    } catch (error) {
+        console.error(`recipeService: Error toggling like for recipe ${recipeId}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Adds a comment to a recipe.
+ * Stores comments as an array on the recipe document for simplicity.
+ * @param {string} recipeId - The ID of the recipe.
+ * @param {object} commentData - Object containing { userId, username, text }.
+ * @returns {Promise<object>} The newly added comment object with generated ID and timestamp.
+ */
+export const addCommentToFirestoreRecipe = async (recipeId, commentData) => {
+    console.log(`recipeService: Adding comment to recipe ${recipeId}:`, commentData);
+    const recipeRef = doc(db, "recipes", recipeId);
+    // Generate a unique ID for the comment client-side for optimistic updates or if not using subcollections
+    const commentId = doc(collection(db, "recipes", recipeId, "dummyCommentsPath")).id; // Creates a new ID
+    const newComment = {
+        ...commentData, // userId, username, text
+        commentId: commentId,
+        timestamp: serverTimestamp()
+    };
+    try {
+        await updateDoc(recipeRef, {
+            comments: arrayUnion(newComment)
+        });
+        console.log(`recipeService: Comment added to recipe ${recipeId}.`);
+        // To return the comment with the server timestamp resolved, you'd re-fetch, but this is often not needed.
+        return { ...newComment, timestamp: new Date() }; // Optimistic timestamp
+    } catch (error) {
+        console.error(`recipeService: Error adding comment to recipe ${recipeId}:`, error);
+        throw error;
+    }
+};
+
+/**
+ * Toggles a save on a recipe for a user.
+ * Updates the user's `savedRecipeIds` array and the recipe's `savesCount`.
+ * @param {string} recipeId - The ID of the recipe.
+ * @param {string} userId - The ID of the user.
+ * @param {boolean} isCurrentlySaved - Whether the user currently has this recipe saved.
+ */
 export const toggleRecipeSave = async (recipeId, userId, isCurrentlySaved) => {
+    console.log(`recipeService: Toggling save for recipe ${recipeId}, user ${userId}, currently saved: ${isCurrentlySaved}`);
     const recipeRef = doc(db, "recipes", recipeId);
     const userRef = doc(db, "users", userId);
     const batch = writeBatch(db);
 
-    if (isCurrentlySaved) {
-        batch.update(userRef, { savedRecipeIds: arrayRemove(recipeId) });
-        batch.update(recipeRef, { savesCount: increment(-1) });
-    } else {
-        batch.update(userRef, { savedRecipeIds: arrayUnion(recipeId) });
-        batch.update(recipeRef, { savesCount: increment(1) });
+    try {
+        if (isCurrentlySaved) {
+            batch.update(userRef, { savedRecipeIds: arrayRemove(recipeId) });
+            batch.update(recipeRef, { savesCount: increment(-1) });
+        } else {
+            batch.update(userRef, { savedRecipeIds: arrayUnion(recipeId) });
+            batch.update(recipeRef, { savesCount: increment(1) });
+        }
+        await batch.commit();
+        console.log(`recipeService: Save status updated for recipe ${recipeId} and user ${userId}.`);
+    } catch (error) {
+        console.error(`recipeService: Error toggling save for recipe ${recipeId}:`, error);
+        throw error;
     }
-    await batch.commit();
 };
 
-
+/**
+ * Searches recipes in Firestore based on various criteria.
+ * @param {object} params - Search parameters { searchTerm, cuisineFilter, difficultyFilter }.
+ * @returns {Promise<Array<object>>} An array of matching recipe objects.
+ */
 export const searchRecipesInFirestore = async ({ searchTerm, cuisineFilter, difficultyFilter }) => {
-    let q = collection(recipesCollectionRef); // Start with the base collection
+    console.log("recipeService: Searching recipes with params:", { searchTerm, cuisineFilter, difficultyFilter });
     let conditions = [];
+    let q = collection(db, "recipes"); // Base query
 
-    // Firestore requires the first orderBy field to be the same as an inequality field if used.
-    // Simple title search (case-sensitive prefix match)
-    if (searchTerm) {
-        // For true full-text search, use Algolia or similar.
-        // This is a basic prefix search.
-        conditions.push(where("title", ">=", searchTerm));
-        conditions.push(where("title", "<=", searchTerm + '\uf8ff'));
-    }
+    // Build conditions
+    // Note: Firestore has limitations on complex queries. You might need to adjust or use a dedicated search service for advanced needs.
+    // For example, case-insensitive search is not directly supported.
+    // Multiple 'array-contains-any' or 'not-in' queries on different fields are not allowed.
+    // Range filters (like '>=', '<=') must be on the same field as the first orderBy.
 
     if (cuisineFilter) {
         conditions.push(where("cuisineType", "==", cuisineFilter));
     }
-
     if (difficultyFilter) {
         conditions.push(where("difficultyLevel", "==", difficultyFilter));
     }
 
-    if (conditions.length > 0) {
-        q = query(recipesCollectionRef, ...conditions, orderBy("title"), orderBy("timestamp", "desc"), limit(20));
-    } else {
-        // If no filters, just get recent recipes
-        q = query(recipesCollectionRef, orderBy("timestamp", "desc"), limit(20));
-    }
-    
-    // IMPORTANT: You will likely need to create composite indexes in Firestore
-    // for these queries to work. Firestore will give you an error message with a link
-    // to create the required index if it's missing.
+    // For searchTerm, a simple prefix match on title.
+    // This requires an index on 'title' if combined with other orderBy or filters.
+    if (searchTerm) {
+        // To make this work with other orderBy clauses, 'title' usually needs to be the first orderBy.
+        // If you have other filters, it gets complex.
+        // Simplest approach might be to filter client-side after a broader fetch if Firestore query limits are hit.
+        // Or, if only title is searched, this is fine:
+        // conditions.push(where("title", ">=", searchTerm.trim()));
+        // conditions.push(where("title", "<=", searchTerm.trim() + '\uf8ff'));
+        // For now, let's assume searchTerm might be used with client-side filtering or a very simple query.
+        // If combined with other filters, you *must* ensure Firestore indexes are set up.
+        // Let's make the query prioritize title search if present, then other filters.
+        if (searchTerm.trim()) {
+             q = query(q, where("title", ">=", searchTerm.trim()), where("title", "<=", searchTerm.trim() + '\uf8ff'), orderBy("title"));
+        }
+        // Apply other filters
+        if (conditions.length > 0) {
+             q = query(q, ...conditions, orderBy("timestamp", "desc"), limit(20));
+        } else if (!searchTerm.trim()){ // No searchTerm and no other filters
+             q = query(q, orderBy("timestamp", "desc"), limit(20));
+        } else { // Only searchTerm
+             q = query(q, orderBy("timestamp", "desc"), limit(20)); // Apply default ordering if only title search
+        }
 
+    } else if (conditions.length > 0) {
+        q = query(q, ...conditions, orderBy("timestamp", "desc"), limit(20));
+    } else {
+        // No search term, no filters - fetch recent recipes
+        q = query(q, orderBy("timestamp", "desc"), limit(20));
+    }
+
+    console.log("recipeService: Executing search query.");
     try {
         const querySnapshot = await getDocs(q);
-        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const recipes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        console.log(`recipeService: Search found ${recipes.length} recipes.`);
+        return recipes;
     } catch (error) {
-        console.error("Error searching recipes, you might need to create Firestore indexes:", error);
-        throw error; // Re-throw to be caught by the UI
+        console.error("recipeService: Error searching recipes. You may need to create Firestore indexes. Query details might be in the error.", error);
+        // Firebase often gives a link in the error message to create the missing index.
+        alert("Search failed. The database might require a new index for this query. Check console for details.");
+        throw error;
     }
 };
