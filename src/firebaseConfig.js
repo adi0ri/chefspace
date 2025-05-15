@@ -2,10 +2,9 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { getStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration
+
 const firebaseConfig = {
   apiKey: "AIzaSyALxRfZqcrZJnb_CVPj1i6tc7ZvGrDTYNw",
   authDomain: "chefspace-d4c66.firebaseapp.com",
@@ -19,6 +18,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
-
-export { auth, db }; // Export db and storage if you use them
+export { auth, db, storage }; 
