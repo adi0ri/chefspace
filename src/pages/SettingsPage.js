@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'; // Added useCallback
 import { useAuth } from '../contexts/AuthContext';
 import { uploadFile, deleteFileByUrl } from '../services/storageService';
-import { updateUserFirestoreProfile } from '../services/userService'; // Not directly used here, but updateUserCustomProfile from context handles it
+import { updateUserFirestoreProfile } from '../services/userService'; 
 
 const SettingsPage = () => {
     const { currentUser, currentUserProfile, updateUserFirebaseProfile, updateUserCustomProfile, resetPassword } = useAuth();
@@ -32,7 +32,7 @@ const SettingsPage = () => {
     useEffect(() => {
         if (currentUser) {
             setUsername(currentUser.displayName || '');
-            // Initialize currentPhotoURL with Auth URL first, then override with Firestore if available
+            
             setCurrentPhotoURL(currentUser.photoURL || '');
         }
         if (currentUserProfile) {
@@ -74,7 +74,7 @@ const SettingsPage = () => {
             console.log("SettingsPage: Requesting camera access...");
             try {
                 let stream;
-                // Prefer user-facing camera for profile pictures
+                
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false });
                 } catch (userFacingError) {
@@ -115,7 +115,7 @@ const SettingsPage = () => {
             };
             videoRef.current.play().catch(e => console.warn("Direct play attempt in useEffect caught (might be benign):", e.message));
         }
-    }, [showCamera]); // No need to add videoRef or streamRef to deps here as their identity doesn't change
+    }, [showCamera]); 
 
     const stopCamera = useCallback(() => {
         console.log("SettingsPage: Stopping camera.");
@@ -198,7 +198,7 @@ const SettingsPage = () => {
             
             if (Object.keys(firestoreDataToUpdate).length > 0) {
                 console.log("SettingsPage: Updating Firestore profile:", firestoreDataToUpdate);
-                await updateUserCustomProfile(firestoreDataToUpdate); // This should trigger AuthContext to refresh currentUserProfile
+                await updateUserCustomProfile(firestoreDataToUpdate); 
             }
             
             setMessage('Profile updated successfully!');

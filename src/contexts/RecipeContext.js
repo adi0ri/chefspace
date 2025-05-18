@@ -5,7 +5,7 @@ import {
     createRecipeInFirestore,
     getRecipesFromFirestore,
     getRecipeByIdFromFirestore,
-    updateRecipeInFirestore, // For future edit functionality
+    updateRecipeInFirestore, 
     deleteRecipeFromFirestore,
     toggleRecipeLike as serviceToggleRecipeLike,
     addCommentToFirestoreRecipe as serviceAddComment,
@@ -71,7 +71,7 @@ export const RecipeProvider = ({ children }) => {
             ...newRecipeData,
             authorId: currentUser.uid,
             authorUsername: currentUserProfile?.username || currentUser.displayName || currentUser.email.split('@')[0],
-            // Initial counts and arrays are now set by createRecipeInFirestore
+            
         };
         try {
             const createdRecipe = await createRecipeInFirestore(recipeWithAuthor);
@@ -94,7 +94,7 @@ export const RecipeProvider = ({ children }) => {
         console.log("RecipeContext: Recipe not in cache, fetching from Firestore for ID:", id);
         try {
             const firestoreRecipe = await getRecipeByIdFromFirestore(id);
-            // Optionally add to local cache if needed, or rely on page-specific fetching
+            
             return firestoreRecipe;
         } catch (error) {
             console.error(`RecipeContext: Error in getRecipeById for ${id}:`, error);
@@ -183,8 +183,7 @@ export const RecipeProvider = ({ children }) => {
         setLoadingRecipes(false);
     };
 
-    // Note: toggleRecipeSave is handled directly in RecipeDetailPage using the service
-    // because it also needs to update the currentUserProfile state, which RecipeContext doesn't directly manage.
+    
 
     const value = {
         recipes,
@@ -194,7 +193,7 @@ export const RecipeProvider = ({ children }) => {
         fetchMoreRecipes,
         addRecipe,
         getRecipeById, // is async
-        // updateRecipe, // Add if you implement edit recipe functionality
+        
         deleteRecipe,
         handleToggleLike,
         addComment,

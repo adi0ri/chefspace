@@ -17,7 +17,7 @@ import {
     arrayUnion,
     arrayRemove,
     increment,
-    writeBatch // For atomic operations like save/unsave
+    writeBatch 
 } from 'firebase/firestore';
 
 const recipesCollectionRef = collection(db, 'recipes');
@@ -41,9 +41,7 @@ export const createRecipeInFirestore = async (recipeData) => {
             comments: [], // Array of comment objects { commentId, userId, username, text, timestamp }
         });
         console.log("recipeService: Recipe created with ID:", docRef.id);
-        // Fetch the just-created doc to get server-generated timestamps immediately (optional, or construct locally)
-        // const newDocSnap = await getDoc(docRef);
-        // return { id: newDocSnap.id, ...newDocSnap.data() };
+        
         return { id: docRef.id, ...recipeData, timestamp: new Date(), createdAt: new Date(), updatedAt: new Date(), likesCount: 0, savesCount: 0, likedBy: [], comments: [] }; // Return with ID and optimistic timestamps
     } catch (error) {
         console.error("recipeService: Error adding recipe to Firestore: ", error);
@@ -197,7 +195,7 @@ export const addCommentToFirestoreRecipe = async (recipeId, commentData) => {
         text: commentData.text,
         commentId: commentId,
         timestamp: new Date() // <-- Use client-side JavaScript Date object
-        // Or: timestamp: new Date().toISOString() // if you prefer ISO strings
+        
     };
     console.log("recipeService: newComment object to be added:", newComment);
 
@@ -252,11 +250,7 @@ export const searchRecipesInFirestore = async ({ searchTerm, cuisineFilter, diff
     let conditions = [];
     let q = collection(db, "recipes"); // Base query
 
-    // Build conditions
-    // Note: Firestore has limitations on complex queries. You might need to adjust or use a dedicated search service for advanced needs.
-    // For example, case-insensitive search is not directly supported.
-    // Multiple 'array-contains-any' or 'not-in' queries on different fields are not allowed.
-    // Range filters (like '>=', '<=') must be on the same field as the first orderBy.
+
 
     if (cuisineFilter) {
         conditions.push(where("cuisineType", "==", cuisineFilter));
@@ -265,22 +259,13 @@ export const searchRecipesInFirestore = async ({ searchTerm, cuisineFilter, diff
         conditions.push(where("difficultyLevel", "==", difficultyFilter));
     }
 
-    // For searchTerm, a simple prefix match on title.
-    // This requires an index on 'title' if combined with other orderBy or filters.
+    
     if (searchTerm) {
-        // To make this work with other orderBy clauses, 'title' usually needs to be the first orderBy.
-        // If you have other filters, it gets complex.
-        // Simplest approach might be to filter client-side after a broader fetch if Firestore query limits are hit.
-        // Or, if only title is searched, this is fine:
-        // conditions.push(where("title", ">=", searchTerm.trim()));
-        // conditions.push(where("title", "<=", searchTerm.trim() + '\uf8ff'));
-        // For now, let's assume searchTerm might be used with client-side filtering or a very simple query.
-        // If combined with other filters, you *must* ensure Firestore indexes are set up.
-        // Let's make the query prioritize title search if present, then other filters.
+        
         if (searchTerm.trim()) {
              q = query(q, where("title", ">=", searchTerm.trim()), where("title", "<=", searchTerm.trim() + '\uf8ff'), orderBy("title"));
         }
-        // Apply other filters
+        
         if (conditions.length > 0) {
              q = query(q, ...conditions, orderBy("timestamp", "desc"), limit(20));
         } else if (!searchTerm.trim()){ // No searchTerm and no other filters
@@ -292,7 +277,7 @@ export const searchRecipesInFirestore = async ({ searchTerm, cuisineFilter, diff
     } else if (conditions.length > 0) {
         q = query(q, ...conditions, orderBy("timestamp", "desc"), limit(20));
     } else {
-        // No search term, no filters - fetch recent recipes
+        
         q = query(q, orderBy("timestamp", "desc"), limit(20));
     }
 
@@ -304,7 +289,7 @@ export const searchRecipesInFirestore = async ({ searchTerm, cuisineFilter, diff
         return recipes;
     } catch (error) {
         console.error("recipeService: Error searching recipes. You may need to create Firestore indexes. Query details might be in the error.", error);
-        // Firebase often gives a link in the error message to create the missing index.
+       
         alert("Search failed. The database might require a new index for this query. Check console for details.");
         throw error;
     }

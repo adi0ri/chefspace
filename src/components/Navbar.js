@@ -13,7 +13,7 @@ const Navbar = () => {
             navigate('/login'); // Navigate after successful logout
         } catch (error) {
             console.error("Failed to log out", error);
-            // Handle logout error (e.g., display a message)
+            // Handle logout error 
         }
     };
 

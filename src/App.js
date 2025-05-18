@@ -20,7 +20,7 @@ function ProtectedRoute({ children }) {
     const { currentUser, loading } = useAuth(); // Get loading state
 
     if (loading) {
-        // You can return a loading spinner or a blank page while auth state is being determined
+        
         return <div className="container"><p>Loading...</p></div>;
     }
 

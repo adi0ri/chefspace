@@ -4,13 +4,13 @@ import { useRecipes } from '../contexts/RecipeContext';
 import RecipeCard from '../components/RecipeCard';
 
 const SearchPage = () => {
-    // `recipes` from context here will be the current list (either all or search results)
+    
     const { recipes: contextRecipes, searchRecipes, loadingRecipes, fetchInitialRecipes } = useRecipes();
     const [searchTerm, setSearchTerm] = useState('');
     const [cuisineFilter, setCuisineFilter] = useState('');
     const [difficultyFilter, setDifficultyFilter] = useState('');
 
-    // For Debugging: Log the raw contextRecipes
+    
     useEffect(() => {
         console.log("SearchPage - Raw contextRecipes (length " + contextRecipes.length + "):", contextRecipes);
         contextRecipes.forEach((recipe, index) => {
@@ -20,12 +20,10 @@ const SearchPage = () => {
         });
     }, [contextRecipes]);
 
-    // Filter out any potentially null, undefined, or objects without an ID or title
+    
     const validDisplayedRecipes = contextRecipes.filter(recipe => {
         const isValid = recipe && typeof recipe === 'object' && recipe.id && recipe.title;
-        // if (!isValid && recipe) { // Log if an object exists but is invalid
-        //     console.warn("SearchPage - Filtering out invalid recipe object:", recipe);
-        // }
+        
         return isValid;
     });
 
@@ -35,12 +33,9 @@ const SearchPage = () => {
     }, [validDisplayedRecipes]);
 
 
-    // To populate filter dropdowns, use all recipes that *could* be loaded initially or after a clear.
-    // If contextRecipes changes due to search, this dropdown list shouldn't necessarily change based on *search results*.
-    // It might be better to fetch distinct cuisines/difficulties once or use a broader set.
-    // For now, using the current contextRecipes for filter options might be okay if "Clear & Show All" repopulates fully.
+   
     const allPossibleRecipesForFilters = useRecipes().recipes.filter(Boolean); // A bit redundant, but gets the full list from context if needed.
-                                                                              // A better approach for filters would be a separate fetch for distinct values.
+                                                                             
     const availableCuisines = useMemo(() => {
         const cuisines = new Set(allPossibleRecipesForFilters.map(r => r.cuisineType).filter(Boolean));
         return Array.from(cuisines).sort();
@@ -55,7 +50,7 @@ const SearchPage = () => {
         setSearchTerm('');
         setCuisineFilter('');
         setDifficultyFilter('');
-        fetchInitialRecipes(); // This should repopulate `contextRecipes` with all recent items
+        fetchInitialRecipes(); 
     };
 
     return (
@@ -104,7 +99,7 @@ const SearchPage = () => {
             {!loadingRecipes && validDisplayedRecipes.length > 0 && (
                 <div className="recipe-grid">
                     {validDisplayedRecipes.map(recipe => (
-                        // The filtering above should ensure recipe is valid
+                        
                         <RecipeCard key={recipe.id} recipe={recipe} />
                     ))}
                 </div>

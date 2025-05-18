@@ -36,9 +36,9 @@ const CreateRecipePage = () => {
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
 
-    // Cleanup camera stream when component unmounts or camera is hidden/stopped
+    
     useEffect(() => {
-        // This function will be returned by useEffect and run on cleanup
+        
         return () => {
             if (streamRef.current) {
                 console.log("CreateRecipePage: Cleaning up camera stream on unmount.");
@@ -46,7 +46,7 @@ const CreateRecipePage = () => {
                 streamRef.current = null; // Clear the ref
             }
         };
-    }, []); // Empty dependency array: runs only on mount and unmount
+    }, []); 
 
     const handleIngredientChange = (index, field, value) => {
         const newIngredients = [...ingredients];
@@ -93,7 +93,7 @@ const CreateRecipePage = () => {
             setCoverPhotoFile(null); setPhotoPreview(null); setError('');
             console.log("CreateRecipePage: Requesting camera access...");
             try {
-                // Try environment first (rear camera), then user (front camera) as a fallback
+                
                 let stream;
                 try {
                     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
@@ -104,7 +104,7 @@ const CreateRecipePage = () => {
                 
                 console.log("CreateRecipePage: Camera stream obtained by requestCameraAccess.");
                 streamRef.current = stream;
-                setShowCamera(true); // This will trigger the useEffect to attach the stream
+                setShowCamera(true); 
             } catch (err) {
                 console.error("CreateRecipePage: Error requesting camera access: ", err);
                 let userMessage = "Could not access camera. Please ensure permissions are granted.";
@@ -127,7 +127,7 @@ const CreateRecipePage = () => {
         }
     };
 
-    // useEffect to attach stream to video element when showCamera is true and refs are ready
+    
     useEffect(() => {
         if (showCamera && videoRef.current && streamRef.current) {
             console.log("CreateRecipePage: useEffect - Attaching stream to video element.");
@@ -140,10 +140,10 @@ const CreateRecipePage = () => {
                     // stopCamera(); // Optionally stop if play fails critically
                 });
             };
-            // Handle cases where onloadedmetadata might not fire quickly or if autoplay is blocked
+            
             videoRef.current.play().catch(e => console.warn("Direct play attempt in useEffect also caught an error (might be benign if onloadedmetadata handles it):", e.message));
         }
-    }, [showCamera]); // Rerun when showCamera changes (or videoRef/streamRef if they could change identity, though refs usually don't)
+    }, [showCamera]); 
 
     const stopCamera = useCallback(() => {
         console.log("CreateRecipePage: Stopping camera.");
@@ -151,7 +151,7 @@ const CreateRecipePage = () => {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
         }
-        // Check if videoRef.current exists before trying to access srcObject
+        
         if (videoRef.current && videoRef.current.srcObject) {
             videoRef.current.srcObject = null;
         }
@@ -220,7 +220,7 @@ const CreateRecipePage = () => {
             } else {
                 console.warn("Recipe might have been created, but navigation ID missing from addRecipe response.", createdRecipe);
                 setError("Recipe created, but failed to navigate. Check console.");
-                // navigate('/'); // Fallback navigation if needed
+                
             }
         } catch (err) {
             setError(err.message || "Failed to create recipe. Please try again.");

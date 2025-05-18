@@ -7,16 +7,16 @@ import {
     onAuthStateChanged,
     updateProfile as updateFirebaseAuthProfile,
     sendPasswordResetEmail,
-    GoogleAuthProvider, // <-- Add this
-    signInWithPopup,    // <-- Add this
-    linkWithPopup,      // <-- Add this (for linking accounts)
-    OAuthProvider      // <-- Potentially for other providers later
+    GoogleAuthProvider, 
+    signInWithPopup,    
+    linkWithPopup,      
+    OAuthProvider      
 } from 'firebase/auth';
 import { auth } from '../firebaseConfig';
 import { createUserProfileDocument, getUserProfile, updateUserFirestoreProfile as updateUserServiceProfile } from '../services/userService';
 
 const AuthContext = createContext();
-const googleProvider = new GoogleAuthProvider(); // <-- Create Google provider instance
+const googleProvider = new GoogleAuthProvider(); 
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     const signup = async (email, password, username) => {
-        // ... (same as before)
+        
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await updateFirebaseAuthProfile(userCredential.user, { displayName: username });
         await createUserProfileDocument(userCredential.user, { username });
@@ -41,18 +41,16 @@ export const AuthProvider = ({ children }) => {
         try {
             const result = await signInWithPopup(auth, googleProvider);
             const user = result.user;
-            // Check if user exists in Firestore, if not, create profile
-            // createUserProfileDocument will handle this check internally
+            
             await createUserProfileDocument(user, {
                 username: user.displayName,
                 profilePictureURL: user.photoURL
             });
             return user;
         } catch (error) {
-            // Handle specific errors like 'auth/account-exists-with-different-credential'
+            
             if (error.code === 'auth/account-exists-with-different-credential') {
-                // Potentially prompt user to link accounts
-                // For now, just log and re-throw
+                
                 console.error("Account exists with different credential:", error);
                 alert("An account already exists with this email address using a different sign-in method. Try logging in with that method or link your accounts (linking not yet implemented in UI).");
             } else {
@@ -62,7 +60,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Optional: Function to link Google account if user is already signed in with email/password
+    
     const linkGoogleAccount = async () => {
         if (!auth.currentUser) throw new Error("No user signed in to link account.");
         try {
@@ -114,13 +112,12 @@ export const AuthProvider = ({ children }) => {
         const unsubscribe = onAuthStateChanged(auth, async (userAuth) => {
             if (userAuth) {
                 setCurrentUser(userAuth);
-                // Ensure Firestore profile is created/fetched
-                // This also handles the case where a user signs in with Google for the first time
+                
                 let userProfileData = await getUserProfile(userAuth.uid);
                 if (!userProfileData) {
                     console.warn("User profile not found in Firestore for UID, attempting to create:", userAuth.uid);
                     try {
-                        // Pass display name and photo URL from Google Auth if available
+                        
                         await createUserProfileDocument(userAuth, {
                             username: userAuth.displayName,
                             profilePictureURL: userAuth.photoURL

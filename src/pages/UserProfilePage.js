@@ -46,7 +46,7 @@ const UserProfilePage = () => {
     if (loading) return <div className="container"><p>Loading profile...</p></div>;
     if (!profileData) return <div className="container"><p>User profile not found.</p></div>;
 
-    // const isOwnProfile = currentUser && currentUser.uid === userId;
+    
 
     return (
         <div className="container">

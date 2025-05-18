@@ -34,11 +34,11 @@ export const uploadFile = async (file, path) => {
 export const deleteFileByUrl = async (fileURL) => {
     if (!fileURL) return;
     try {
-        const storageRef = ref(storage, fileURL); // This gets a reference from the HTTPS URL
+        const storageRef = ref(storage, fileURL); 
         await deleteObject(storageRef);
         console.log("File deleted successfully from URL:", fileURL);
     } catch (error) {
-        // Firebase throws an error if the file doesn't exist, which can be okay if we're just cleaning up.
+        
         if (error.code !== 'storage/object-not-found') {
             console.error("Error deleting file by URL:", error);
             throw error;

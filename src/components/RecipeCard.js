@@ -3,9 +3,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useRecipes } from '../contexts/RecipeContext'; // To call handleToggleLike
-// We are moving toggleRecipeSave logic into RecipeDetailPage for better state management of isSaved.
-// For the card, it's mostly display. Actions will be on the detail page.
-// However, if you want like/save directly on the card, the context function needs to handle UI update.
+
 
 const RecipeCard = ({ recipe }) => {
     const { currentUser, currentUserProfile } = useAuth();
@@ -18,9 +16,7 @@ const RecipeCard = ({ recipe }) => {
     }
 
     const isLikedByCurrentUser = currentUser && recipe.likedBy?.includes(currentUser.uid);
-    // For saved status on the card, we'd ideally need this info passed down or managed in a way
-    // that the card can reflect it without fetching user profile for every card.
-    // Let's assume for the card, we primarily show counts, and full save interaction is on detail page.
+    
     const isSavedByCurrentUserOnCard = currentUserProfile && currentUserProfile.savedRecipeIds?.includes(recipe.id);
 
 
@@ -42,8 +38,7 @@ const RecipeCard = ({ recipe }) => {
         }
     };
 
-    // Simplified save button for card - actual save/unsave logic on detail page
-    // or implement a similar handleToggleSave in RecipeContext if needed here.
+    
     const onSaveClickOnCard = (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -51,11 +46,7 @@ const RecipeCard = ({ recipe }) => {
             alert("Please login to save recipes.");
             return;
         }
-        // For the card, you might just navigate to the detail page or show a message
-        // alert(`Save functionality primarily on recipe detail page for ${recipe.title}`);
-        // Or, if you implement a context function for card-level save:
-        // try { await handleToggleSaveOnCard(recipe.id, isSavedByCurrentUserOnCard); } catch ...
-        // For now, let's make it a visual indicator and link to the detail page for action
+        
         console.log("RecipeCard: Save button clicked. Interaction on detail page.");
     };
 
@@ -63,7 +54,7 @@ const RecipeCard = ({ recipe }) => {
     return (
         <div className="recipe-card">
             <Link to={`/recipe/${recipe.id}`}>
-                {/* ... (image and title - same as before) ... */}
+                {/* ... (image and title) ... */}
                 {recipe.photoURLs && recipe.photoURLs.length > 0 ? (
                     <img src={recipe.photoURLs[0]} alt={recipe.title} />
                 ) : (

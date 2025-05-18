@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
-// Simple Google Icon (SVG or from a library)
+
 const GoogleIcon = () => (
     <svg viewBox="0 0 24 24" width="20" height="20" style={{ marginRight: '10px' }}>
         <path fill="#4285F4" d="M22.56,12.25C22.56,11.47 22.49,10.72 22.36,10H12V14.26H17.95C17.73,15.58 16.91,16.69 15.67,17.55V20.09H19.67C21.56,18.36 22.56,15.62 22.56,12.25Z"/>
@@ -29,7 +29,7 @@ const LoginPage = () => {
     }, [currentUser, navigate]);
 
     const handleSubmit = async (e) => {
-        // ... (same as before for email/password login)
+        
         e.preventDefault();
         setError(''); setLoading(true);
         try { await login(email, password); navigate('/'); }

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 
-// Re-use GoogleIcon or import from a shared components folder
+
 const GoogleIcon = () => (  <svg viewBox="0 0 24 24" width="20" height="20" style={{ marginRight: '10px' }}>
 <path fill="#4285F4" d="M22.56,12.25C22.56,11.47 22.49,10.72 22.36,10H12V14.26H17.95C17.73,15.58 16.91,16.69 15.67,17.55V20.09H19.67C21.56,18.36 22.56,15.62 22.56,12.25Z"/>
 <path fill="#34A853" d="M12,24C15.24,24 17.95,22.89 19.67,20.09L15.67,17.55C14.58,18.27 13.36,18.69 12,18.69C9.38,18.69 7.15,16.95 6.26,14.54H2.14V17.14C3.86,21.25 7.64,24 12,24Z"/>
@@ -12,7 +12,7 @@ const GoogleIcon = () => (  <svg viewBox="0 0 24 24" width="20" height="20" styl
 </svg> );
 
 const SignupPage = () => {
-    // ... (username, email, password, error, loading states same as before)
+    
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -70,7 +70,7 @@ const SignupPage = () => {
             <p style={{textAlign: 'center', margin: '15px 0', color: '#777'}}>OR</p>
 
             <form onSubmit={handleSubmit}>
-                {/* ... (username, email, password fields same as before) ... */}
+                {/* ... (username, email, password fields) ... */}
                 <div><label htmlFor="username">Username:</label><input type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} required /></div>
                 <div><label htmlFor="email">Email:</label><input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
                 <div><label htmlFor="password">Password:</label><input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>

@@ -5,11 +5,11 @@ from 'react-router-dom';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { toggleRecipeSave } from '../services/recipeService';
-import { getUserProfile } from '../services/userService'; // To refresh user profile for save status
+import { getUserProfile } from '../services/userService'; 
 
 const RecipeDetailPage = () => {
     const { id } = useParams();
-    // handleToggleLike and addComment come from useRecipes context
+
     const { getRecipeById, handleToggleLike, addComment, deleteRecipe: deleteRecipeFromContext } = useRecipes();
     const { currentUser, currentUserProfile, /* No direct updateUserProfile needed here from AuthContext for this page */ } = useAuth();
     const navigate = useNavigate(); // Added navigate
@@ -25,11 +25,11 @@ const RecipeDetailPage = () => {
         setLoading(true);
         setActionError('');
         try {
-            const fetchedRecipe = await getRecipeById(id); // This should fetch from Firestore via context
+            const fetchedRecipe = await getRecipeById(id); 
             console.log("RecipeDetailPage: Fetched Recipe:", fetchedRecipe);
             if (fetchedRecipe) {
                 setRecipe(fetchedRecipe);
-                // Check saved status based on currentUserProfile (which should be up-to-date from AuthContext)
+                
                 if (currentUserProfile && fetchedRecipe.id) {
                     const saved = currentUserProfile.savedRecipeIds?.includes(fetchedRecipe.id) || false;
                     console.log(`RecipeDetailPage: Recipe ${fetchedRecipe.id} isSaved status: ${saved}`);
@@ -65,11 +65,9 @@ const RecipeDetailPage = () => {
         console.log(`RecipeDetailPage: Attempting to like/unlike recipe ID: ${recipe.id}`);
         setActionError('');
         try {
-            // handleToggleLike from context should update Firestore AND then update the recipe in context's state
+            
             await handleToggleLike(recipe.id, recipe.likedBy || []); // Pass current likedBy array
-            // After context updates, RecipeContext should ideally provide the updated recipe,
-            // or this component re-fetches. Let's assume context handles the recipe state update for now.
-            // To see immediate change, we might need to refetch or context needs to be more reactive here.
+            
             await fetchRecipeAndUserData(); // Re-fetch to ensure UI consistency for likes
             console.log("RecipeDetailPage: Like toggled successfully.");
         } catch (error) {
@@ -119,15 +117,10 @@ const RecipeDetailPage = () => {
             await toggleRecipeSave(recipe.id, currentUser.uid, isSavedByCurrentUser);
             setIsSavedByCurrentUser(!isSavedByCurrentUser); // Optimistic UI update for saved status
 
-            // To update AuthContext.currentUserProfile with the new savedRecipeIds:
-            // This is a bit tricky as AuthContext doesn't have a direct setter or refresh function for currentUserProfile
-            // We'll fetch the user profile and rely on onAuthStateChanged OR a manual update if we modify AuthContext
+            
             const updatedUserProfile = await getUserProfile(currentUser.uid); // Fetch fresh
             if (updatedUserProfile) {
-                // Ideally, AuthContext would have a function like:
-                // authContext.setCurrentUserProfile(updatedUserProfile);
-                // For now, we assume on next app load or settings page visit it will refresh.
-                // This means the savedRecipeIds in currentUserProfile might be stale until a full refresh of it.
+                
                 console.log("RecipeDetailPage: User profile fetched after save/unsave:", updatedUserProfile.savedRecipeIds);
             }
             await fetchRecipeAndUserData(); // Re-fetch recipe to update its savesCount
@@ -146,7 +139,7 @@ const RecipeDetailPage = () => {
     if (!recipe) return <div className="container"><p>Recipe not found.</p><Link to="/">Go Home</Link></div>; // Should be caught by error above
 
     const isAuthor = currentUser && recipe.authorId === currentUser.uid;
-    // Use recipe.likedBy from the fetched recipe state for more reliability
+    
     const isLikedByCurrentUserState = currentUser && recipe.likedBy?.includes(currentUser.uid);
 
     return (
