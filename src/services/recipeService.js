@@ -178,25 +178,37 @@ export const toggleRecipeLike = async (recipeId, userId, isCurrentlyLiked) => {
  * @param {object} commentData - Object containing { userId, username, text }.
  * @returns {Promise<object>} The newly added comment object with generated ID and timestamp.
  */
+
+
 export const addCommentToFirestoreRecipe = async (recipeId, commentData) => {
-    console.log(`recipeService: Adding comment to recipe ${recipeId}:`, commentData);
+    console.log(`recipeService: Adding comment to recipe ${recipeId} with data:`, commentData);
+    if (!recipeId || !commentData || !commentData.userId || !commentData.text) {
+        console.error("recipeService: Invalid data for adding comment.", { recipeId, commentData });
+        throw new Error("Invalid data for adding comment.");
+    }
+
     const recipeRef = doc(db, "recipes", recipeId);
-    // Generate a unique ID for the comment client-side for optimistic updates or if not using subcollections
-    const commentId = doc(collection(db, "recipes", recipeId, "dummyCommentsPath")).id; // Creates a new ID
+    const commentId = doc(collection(db, "recipes", recipeId, "_dummyPathForIdGen")).id; // Get a unique ID
+    console.log("recipeService: Generated commentId:", commentId);
+
     const newComment = {
-        ...commentData, // userId, username, text
+        userId: commentData.userId,
+        username: commentData.username,
+        text: commentData.text,
         commentId: commentId,
-        timestamp: serverTimestamp()
+        timestamp: new Date() // <-- Use client-side JavaScript Date object
+        // Or: timestamp: new Date().toISOString() // if you prefer ISO strings
     };
+    console.log("recipeService: newComment object to be added:", newComment);
+
     try {
         await updateDoc(recipeRef, {
             comments: arrayUnion(newComment)
         });
-        console.log(`recipeService: Comment added to recipe ${recipeId}.`);
-        // To return the comment with the server timestamp resolved, you'd re-fetch, but this is often not needed.
-        return { ...newComment, timestamp: new Date() }; // Optimistic timestamp
+        console.log(`recipeService: Successfully called updateDoc with arrayUnion for recipe ${recipeId}.`);
+        return newComment; // Return the comment with the client-side timestamp
     } catch (error) {
-        console.error(`recipeService: Error adding comment to recipe ${recipeId}:`, error);
+        console.error(`recipeService: Error calling updateDoc for comments on recipe ${recipeId}:`, error);
         throw error;
     }
 };
