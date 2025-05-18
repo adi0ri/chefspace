@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/chefspace/static/css/main.d7d25f3a.css",
-    "main.js": "/chefspace/static/js/main.ad01e2b1.js",
+    "main.js": "/chefspace/static/js/main.5c393d2e.js",
     "static/js/453.fddd6a46.chunk.js": "/chefspace/static/js/453.fddd6a46.chunk.js",
     "index.html": "/chefspace/index.html",
     "main.d7d25f3a.css.map": "/chefspace/static/css/main.d7d25f3a.css.map",
-    "main.ad01e2b1.js.map": "/chefspace/static/js/main.ad01e2b1.js.map",
+    "main.5c393d2e.js.map": "/chefspace/static/js/main.5c393d2e.js.map",
     "453.fddd6a46.chunk.js.map": "/chefspace/static/js/453.fddd6a46.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.d7d25f3a.css",
-    "static/js/main.ad01e2b1.js"
+    "static/js/main.5c393d2e.js"
   ]
 }
